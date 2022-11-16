@@ -1,7 +1,6 @@
 import os
 import json
 import secrets
-import threading
 
 import grpc
 import KeyTransfer_pb2
@@ -10,7 +9,7 @@ import KeyTransfer_pb2_grpc
 class KeyReleaseAgent:
     qkd_dir = ''
     sites = dict()
-    seqId = 0
+    seqID = 1
 
     sim_key_bank = list();
     key_bit_size = 32;
@@ -58,12 +57,10 @@ class KeyReleaseAgent:
     def append_to_key_bank(self, additional_keys):
         self.sim_key_bank.append(additional_keys);
 
-    # -------- TEMPORARY -----------
     def get_n_keys(self, n):
         key_byte_size = self.key_bit_size // 8
-        keys = [secrets.token_bytes(key_byte_size) for i in range(n)]
+        keys = [secrets.token_bytes(key_byte_size) for _ in range(n)]
         return keys;
-    # --------
 
     def releaseKeys(self, bits):
         num_keys = bits//(self.key_bit_size*self.bit_to_key_ineffiency);
@@ -73,16 +70,16 @@ class KeyReleaseAgent:
 
         print(f"Releasing {num_keys} keys...")
         def send_keys():
-            for i, key in enumerate(keys):
+            for key in keys:
                 for site in self.sites.values():
                     stub = KeyTransfer_pb2_grpc.KeyTransferStub(site["channel"])
                     self.send_key(
                         stub=stub, 
                         key=key,
-                        seqID=i+1, 
+                        seqID=self.seqID,
                         localID=site['localID']
                     )
-        # threading.Thread(target=send_keys).start()
+                    self.seqID += 1
         send_keys()
 
         return left_over_bits;

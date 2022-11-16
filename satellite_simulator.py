@@ -179,8 +179,7 @@ def main():
         'sites',
         metavar='S',
         type=str,
-        default=['A', 'B'],
-        nargs='*',
+        nargs=2,
         help='Sites to send keys to.'
     )
     parser.add_argument(

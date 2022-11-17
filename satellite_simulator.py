@@ -52,13 +52,13 @@ class IsolatedReleaseSim:
 
     report_counter = 0;
 
-    def __init__(self, sim_data_a_file, sim_data_b_file, qkd_dir, sites):
+    def __init__(self, sim_data_a_file, sim_data_b_file, qkd_dir, site):
 
         dc = DataCollector();
 
         self.kra = KeyReleaseAgent(
             qkd_dir,
-            sites,
+            site,
             list(),
             self.key_bit_size,
             self.bit_to_key_ineffiency,
@@ -173,14 +173,14 @@ class IsolatedReleaseSim:
 def main():
     parser = argparse.ArgumentParser(
         description="""
-        Start satellite driver between two nodes. Assumes that one of the nodes is localhost.
+        Start satellite driver between local and remote node.
         """)
     parser.add_argument(
-        'sites',
+        'site',
         metavar='S',
         type=str,
-        nargs=2,
-        help='Sites to send keys to.'
+        nargs=1,
+        help='Remote site to send keys to.'
     )
     parser.add_argument(
         '-d','--qkd_dir',
@@ -191,16 +191,16 @@ def main():
     parser.add_argument(
         '-a','--a_data',
         dest='site_a_data',
-        help='The location of the first site\'s simulation data.'
+        help='The location of the local site\'s simulation data.'
     )
     parser.add_argument(
         '-b','--b_data',
         dest='site_b_data',
-        help='The location of the second site\'s simulation data.'
+        help='The location of the remote site\'s simulation data.'
     )
     args = parser.parse_args()
 
-    IsolatedReleaseSim(args.site_a_data, args.site_b_data, args.qkd_dir, args.sites)
+    IsolatedReleaseSim(args.site_a_data, args.site_b_data, args.qkd_dir, args.site[0])
 
 if __name__ == "__main__":
     main()

@@ -8,7 +8,7 @@ import KeyTransfer_pb2_grpc
 
 class KeyReleaseAgent:
     qkd_dir = ''
-    sites = dict()
+    sites = list()
     seqID = 1
 
     sim_key_bank = list();
@@ -19,8 +19,7 @@ class KeyReleaseAgent:
     keys_in_current_file = 0;
     bit_to_key_ineffiency = 2;
 
-    def __init__(self, qkd_dir, sites, sim_key_bank = [], key_bit_size = 32, bit_to_key_ineffiency =2, keys_per_file = 4096):
-        sites.sort()
+    def __init__(self, qkd_dir, site, sim_key_bank = [], key_bit_size = 32, bit_to_key_ineffiency =2, keys_per_file = 4096):
         self.qkd_dir = qkd_dir
         self.sim_key_bank = sim_key_bank;
         if(key_bit_size % 8 == 0):
@@ -34,25 +33,27 @@ class KeyReleaseAgent:
 
         # Get the site stubs for sending keys
         port = "50051"
-        for site in sites:
-            channel_url = f"localhost:{port}"
-            qkdlink_path = os.path.join(
-                self.qkd_dir, 
-                "qnl/qll/keys/",
-                site,
-                "qkdlink.json"
-            )
-            if os.path.exists(qkdlink_path):
-                with open(qkdlink_path, 'r') as qkdlink_file:
-                    qkdlink_data = json.load(qkdlink_file)
-                    remote_ip = qkdlink_data['remoteSiteAgentUrl'].split(':')[0]
-                    channel_url = f"{remote_ip}:{port}"
-            channel = grpc.insecure_channel(channel_url)
-            self.sites[site] = {
-                "channel": channel,
-                "stub": KeyTransfer_pb2_grpc.KeyTransferStub(channel),
-                "localID": f"{'_'.join(sites)}_{site}",
+        qkdlink_path = os.path.join(
+            self.qkd_dir, 
+            "qnl/qll/keys/",
+            site,
+            "qkdlink.json"
+        )
+        with open(qkdlink_path, 'r') as qkdlink_file:
+            qkdlink_data = json.load(qkdlink_file)
+            # Local Site
+            local_ip = qkdlink_data['localSiteAgentUrl'].split(':')[0]
+            local_site = {
+                "stub": KeyTransfer_pb2_grpc.KeyTransferStub(grpc.insecure_channel(f"{local_ip}:{port}")),
+                "localID": qkdlink_data['localQKDDeviceId'],
             }
+            remote_ip = qkdlink_data['remoteSiteAgentUrl'].split(':')[0]
+            # Remote Site
+            remote_site = {
+                "stub": KeyTransfer_pb2_grpc.KeyTransferStub(grpc.insecure_channel(f"{remote_ip}:{port}")),
+                "localID": qkdlink_data['remoteQKDDeviceId'],
+            }
+            self.sites = [local_site, remote_site]
 
     def append_to_key_bank(self, additional_keys):
         self.sim_key_bank.append(additional_keys);
@@ -69,18 +70,15 @@ class KeyReleaseAgent:
         keys = self.get_n_keys(num_keys);
 
         print(f"Releasing {num_keys} keys...")
-        def send_keys():
-            for key in keys:
-                for site in self.sites.values():
-                    stub = KeyTransfer_pb2_grpc.KeyTransferStub(site["channel"])
-                    self.send_key(
-                        stub=stub, 
-                        key=key,
-                        seqID=self.seqID,
-                        localID=site['localID']
-                    )
-                    self.seqID += 1
-        send_keys()
+        for key in keys:
+            for site in self.sites:
+                self.send_key(
+                    stub=site["stub"], 
+                    key=key,
+                    seqID=self.seqID,
+                    localID=site['localID']
+                )
+                self.seqID += 1
 
         return left_over_bits;
 

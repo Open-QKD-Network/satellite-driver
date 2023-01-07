@@ -10,10 +10,10 @@ pip install -r requirements.txt
 
 ## Usage
 
-The driver can simply be run by providing the site IDs of the two ground stations. The driver must be run locally on one of the ground stations to work as it uses the `qkdlink.json` to find the relevant info to communicate with the other ground station.
+The driver can simply be run by providing the site ID of remote station. The driver must be run locally on one of the ground stations to work as it uses the `qkdlink.json` to find the relevant info to communicate with the other ground station.
 
 ```bash
-python3 -m satellite_simulator A B # send keys to sites A and B
+python3 -m satellite_simulator D # Send key to local and remote site D
 ```
 
 To see what other arguments are available check the help text.
